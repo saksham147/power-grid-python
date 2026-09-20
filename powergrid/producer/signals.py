@@ -12,6 +12,7 @@ from django.dispatch import receiver
 
 from simulation.signals import tick_advanced
 
+from . import history
 from .generation import handle_tick
 
 logger = logging.getLogger(__name__)
@@ -25,3 +26,9 @@ def on_tick_advanced(sender, tick_number, frequency_deviation, **kwargs):
         logger.exception('Tick %s failed in producer; the clock continues', tick_number)
         return
     logger.debug('Producer handled tick %s: %d plants', tick_number, len(events))
+
+    # Same thread as the tick, one after the other -- the guarantee the Java job gets
+    # from sharing the simulation's single-thread scheduler -- so a rollup never runs
+    # concurrently with a tick writing to the same tables. It has its own error
+    # handling, so a failed rollup cannot be mistaken for a failed tick.
+    history.maybe_roll_up()

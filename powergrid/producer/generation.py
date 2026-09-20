@@ -15,6 +15,8 @@ from django.utils import timezone
 
 from simulation.clock import TICKS_PER_DAY, day_number, energy_mwh
 
+from . import kafka
+from .events import ProducerOutputEvent
 from .models import GenerationRecord, PlantType, PowerPlant
 
 logger = logging.getLogger(__name__)
@@ -175,12 +177,13 @@ STRATEGIES_BY_TYPE = {
 
 
 @transaction.atomic
-def handle_tick(tick_number: int, frequency_deviation: float) -> list[dict]:
-    """Turns one tick into one output reading per active plant.
+def handle_tick(tick_number: int, frequency_deviation: float) -> list[ProducerOutputEvent]:
+    """Turns one tick into one output event per active plant, and publishes them.
 
     One DB read, in-memory strategy dispatch, one batched write-back of current
-    state, one batched insert of history -- ported from
-    ``Producer.generation.GenerationService.handleTick``.
+    state, one batched insert of history, then N publishes -- ported from
+    ``Producer.generation.GenerationService.handleTick``. Returns what it published,
+    in table order; empty if no plants are active.
     """
     plants = list(PowerPlant.objects.filter(active=True))
     events = []
@@ -198,12 +201,12 @@ def handle_tick(tick_number: int, frequency_deviation: float) -> list[dict]:
         plant.current_output_mw = output_mw
         plant.add_energy(energy_mwh(output_mw))
 
-        events.append({
-            'plant_id': plant.id,
-            'tick_number': tick_number,
-            'output_mw': output_mw,
-            'timestamp': timestamp,
-        })
+        events.append(ProducerOutputEvent(
+            producer_id=plant.id,
+            tick_number=tick_number,
+            output_mw=output_mw,
+            timestamp=timestamp,
+        ))
         history_rows.append(GenerationRecord(
             plant_id=plant.id,
             plant_type=plant.type,
@@ -217,6 +220,11 @@ def handle_tick(tick_number: int, frequency_deviation: float) -> list[dict]:
         PowerPlant.objects.bulk_update(plants, ['current_output_mw', 'energy_mwh'])
     if history_rows:
         GenerationRecord.objects.bulk_create(history_rows)
+
+    # After commit, not now: subscribers must never see a tick that later rolls back,
+    # and their own queries must not run inside (and be able to poison) this tick's
+    # transaction. A failed tick therefore publishes nothing.
+    transaction.on_commit(lambda: kafka.publish(events))
 
     logger.debug('Tick %s (deviation %s Hz): %d output events', tick_number, frequency_deviation, len(events))
     return events
