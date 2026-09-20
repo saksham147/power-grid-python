@@ -17,7 +17,7 @@ def status(request):
         'tickNumber': tick,
         'simulatedTime': time_of_day(tick),
         'simulatedDay': day_number(tick),
-        'plantCount': PowerPlant.objects.filter(active=True).count(),
+        'plantCount': PowerPlant.objects.active().count(),
         'lastEventCount': latest_events.count(),
         'fleetOutputMw': fleet_output_mw,
         'fleetEnergyMwh': fleet_energy_mwh,

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import GenerationRecord, PowerPlant
+from .models import GenerationRecord, GenerationRollup, PowerPlant
 
 
 @admin.register(PowerPlant)
@@ -20,6 +20,23 @@ class GenerationRecordAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         # Insert-only history, written by the simulation loop.
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(GenerationRollup)
+class GenerationRollupAdmin(admin.ModelAdmin):
+    list_display = (
+        'id', 'plant_id', 'plant_type', 'bucket_start', 'avg_output_mw',
+        'min_output_mw', 'max_output_mw', 'energy_mwh', 'sample_count',
+    )
+    list_filter = ('plant_type',)
+    ordering = ('-bucket_start',)
+
+    def has_add_permission(self, request):
+        # Written only by the native rollup INSERT...SELECT.
         return False
 
     def has_change_permission(self, request, obj=None):

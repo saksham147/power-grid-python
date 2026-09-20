@@ -182,7 +182,7 @@ def handle_tick(tick_number: int, frequency_deviation: float) -> list[dict]:
     state, one batched insert of history -- ported from
     ``Producer.generation.GenerationService.handleTick``.
     """
-    plants = list(PowerPlant.objects.filter(active=True))
+    plants = list(PowerPlant.objects.active())
     events = []
     history_rows = []
     timestamp = timezone.now()
