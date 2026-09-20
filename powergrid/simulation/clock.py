@@ -26,15 +26,31 @@ SIMULATED_MINUTES_PER_TICK = (24 * 60) // TICKS_PER_DAY
 REAL_TIME_PER_TICK_SECONDS = SIMULATED_MINUTES_PER_TICK
 
 
+def minute_of_day(tick: int) -> int:
+    """Minutes since midnight the given tick represents, wrapping at midnight."""
+    return (tick % TICKS_PER_DAY) * SIMULATED_MINUTES_PER_TICK
+
+
 def time_of_day(tick: int) -> str:
     """Time of day the given tick represents, wrapping at midnight, as "HH:MM"."""
-    minutes = (tick % TICKS_PER_DAY) * SIMULATED_MINUTES_PER_TICK
+    minutes = minute_of_day(tick)
     return "%02d:%02d" % (minutes // 60, minutes % 60)
 
 
 def day_number(tick: int) -> int:
     """Simulated days elapsed; tick 0 through 287 are day 0."""
     return tick // TICKS_PER_DAY
+
+
+def day_of_week(tick: int) -> int:
+    """0 = Monday .. 6 = Sunday. Day 0 is a Monday, so weekday and weekend behaviour
+    is reachable from tick 0 without any wall clock being involved."""
+    return day_number(tick) % 7
+
+
+def is_weekend(tick: int) -> bool:
+    """True on Saturday and Sunday."""
+    return day_of_week(tick) >= 5
 
 
 def energy_mwh(output_mw: float) -> float:
