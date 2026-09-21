@@ -57,3 +57,19 @@ def energy_mwh(output_mw: float) -> float:
     """Energy something produces/consumes in one tick: power held for one tick's
     simulated duration."""
     return output_mw * SIMULATED_MINUTES_PER_TICK / 60.0
+
+
+def minute_of_day(tick: int) -> int:
+    """Minutes since midnight the given tick represents, wrapping at midnight."""
+    return (tick % TICKS_PER_DAY) * SIMULATED_MINUTES_PER_TICK
+
+
+def day_of_week(tick: int) -> int:
+    """0 = Monday .. 6 = Sunday. Day 0 is a Monday, so weekday and weekend behaviour is
+    reachable from tick 0 without any wall clock being involved."""
+    return day_number(tick) % 7
+
+
+def is_weekend(tick: int) -> bool:
+    """True on Saturday and Sunday."""
+    return day_of_week(tick) >= 5

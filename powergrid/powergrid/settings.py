@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'simulation',
     'producer',
+    'customer',
 ]
 
 MIDDLEWARE = [
@@ -86,6 +87,9 @@ DATABASES = {
         'PORT': os.environ.get('DB_PORT', '5433'),
     }
 }
+
+# Redis: the customer app's zones, consumer units and latest demand.
+REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 
 
 # Password validation
