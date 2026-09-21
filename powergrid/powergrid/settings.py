@@ -88,6 +88,9 @@ DATABASES = {
     }
 }
 
+# Redis: the customer app's zones, consumer units and latest demand.
+REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
