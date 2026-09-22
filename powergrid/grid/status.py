@@ -14,9 +14,10 @@ and the one thing Grid alone is allowed to change about it -- frequency deviatio
 """
 import dataclasses
 
-from simulation.clock import REAL_TIME_PER_TICK_SECONDS, day_number, time_of_day
+from simulation.clock import REAL_TIME_PER_TICK_SECONDS
 from simulation.models import SimulationState
 
+from .events import GridTickEvent
 from .state import GridStateTracker
 
 
@@ -37,14 +38,15 @@ class GridStatus:
 
 def snapshot(tracker: GridStateTracker) -> GridStatus:
     state = SimulationState.load()
+    tick = GridTickEvent.from_state(state)
     supply_kw = tracker.total_supply_kw()
     demand_kw = tracker.total_demand_kw()
     return GridStatus(
-        tick_number=state.current_tick,
-        simulated_time=time_of_day(state.current_tick),
-        simulated_day=day_number(state.current_tick),
+        tick_number=tick.tick_number,
+        simulated_time=tick.simulated_time,
+        simulated_day=tick.simulated_day,
         tick_interval_seconds=REAL_TIME_PER_TICK_SECONDS,
-        frequency_deviation_hz=state.frequency_deviation_hz,
+        frequency_deviation_hz=tick.frequency_deviation_hz,
         auto_control_enabled=state.auto_control,
         total_supply_kw=supply_kw,
         total_demand_kw=demand_kw,

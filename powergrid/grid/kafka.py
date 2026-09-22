@@ -9,11 +9,11 @@ this module to publish -- it only consumes.
 
 Both reactions are in-process Django signals, since the project has no message
 broker -- the same shape ``distributor.kafka`` already uses. Consuming producer
-output and zone balance is duck-typed on purpose: the listeners below read only the
-attribute names their upstream signals are documented to carry
-(``producer_id``/``output_mw``; ``zone_id``/``demand_kw``), never importing
-producer's or distributor's own event classes -- see ``distributor.kafka`` for the
-same reasoning.
+output and zone balance is duck-typed on purpose: the listeners below read the
+incoming signal only through ``events.ProducerOutputEvent.from_signal``/
+``events.ZoneBalanceEvent.from_signal``, which pick out just the documented attribute
+names their upstream signals are known to carry, never importing producer's or
+distributor's own event classes -- see ``distributor.kafka`` for the same reasoning.
 
 Nothing here connects itself; a future composition root wires the listeners once this
 app has somewhere to hand its tracker, and importing this module has no side effects.
@@ -23,6 +23,7 @@ import logging
 from distributor.kafka import balance_published
 from producer.kafka import output_published
 
+from .events import ProducerOutputEvent, ZoneBalanceEvent
 from .state import GridStateTracker
 
 logger = logging.getLogger(__name__)
@@ -44,7 +45,8 @@ class ProducerOutputListener:
 
     def on_output_published(self, sender, event, **kwargs):
         try:
-            self._tracker.record_supply(event.producer_id, event.output_mw)
+            output = ProducerOutputEvent.from_signal(event)
+            self._tracker.record_supply(output.producer_id, output.output_mw)
         except Exception:
             logger.exception('Failed to record output for plant %s', getattr(event, 'producer_id', '?'))
 
@@ -63,7 +65,8 @@ class ZoneBalanceListener:
 
     def on_balance_published(self, sender, event, **kwargs):
         try:
-            self._tracker.record_demand(event.zone_id, event.demand_kw)
+            balance = ZoneBalanceEvent.from_signal(event)
+            self._tracker.record_demand(balance.zone_id, balance.demand_kw)
         except Exception:
             logger.exception('Failed to record demand for zone %s', getattr(event, 'zone_id', '?'))
 
