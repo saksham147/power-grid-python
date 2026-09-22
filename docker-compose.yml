@@ -14,7 +14,10 @@ services:
       # one at postgres:5432 over the Compose network.
       - "5435:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      # Not .../data: Postgres 18+'s image stores data in a version-specific
+      # subdirectory of this mount and refuses to start if something else already
+      # occupies .../data directly (this is what it means by "unused mount/volume").
+      - postgres-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U powergrid -d powergrid"]
       interval: 5s
