@@ -1,22 +1,11 @@
-import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
+import { useGridStatus } from '../lib/gridQueries.js'
 import { useCounterStore } from '../store/useCounterStore.js'
-
-async function fetchGridStatus() {
-	const response = await fetch('/api/grid/status/')
-	if (!response.ok) {
-		throw new Error(`Grid status request failed: ${response.status}`)
-	}
-	return response.json()
-}
 
 export default function Home() {
 	const count = useCounterStore((state) => state.count)
 	const increment = useCounterStore((state) => state.increment)
-	const { data: status, isLoading, isError } = useQuery({
-		queryKey: ['grid-status'],
-		queryFn: fetchGridStatus,
-	})
+	const { data: status, isLoading, isError } = useGridStatus()
 
 	return (
 		<div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-900 text-slate-100">
