@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'simulation',
     'producer',
     'customer',
+    'billing',
 ]
 
 MIDDLEWARE = [
