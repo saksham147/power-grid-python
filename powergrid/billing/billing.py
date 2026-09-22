@@ -249,6 +249,16 @@ class InsufficientFundsException(Exception):
         super().__init__(f'Wallet {wallet_id} has ₹{balance_rupees:.2f} but this costs ₹{amount_rupees:.2f}')
 
 
+class PlantTypeLockedException(Exception):
+    """A purchase was attempted for a plant type not yet unlocked -- the request is
+    well-formed, it is simply not yet permitted, the distinction
+    ``InsufficientFundsException`` draws for "permitted, but can't afford it"."""
+
+    def __init__(self, plant_type: PlantType, threshold_kwh: float, cumulative_kwh_sold: float):
+        super().__init__(f'{plant_type.value} is locked until {threshold_kwh:.0f} kWh has been sold '
+                         f'grid-wide (currently {cumulative_kwh_sold:.0f})')
+
+
 class WalletRepository(abc.ABC):
     """Outbound port: reads and writes a wallet -- a zone's, or the shared Grid
     wallet.

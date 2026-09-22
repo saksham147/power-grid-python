@@ -29,6 +29,17 @@ class Wallet(models.Model):
         return f'{self.zone_id}: ₹{self.balance_rupees:.2f}'
 
 
+class WalletTransactionQuerySet(models.QuerySet):
+    """The one query the ledger needs beyond plain create/read."""
+
+    def sum_by_types(self, types) -> float:
+        """Grid-wide sum across every wallet, for whichever transaction types the
+        caller groups together as one figure -- see the billing summary endpoint,
+        which sums ``BILL_DEBIT`` for revenue and every spend type for total spend."""
+        values = [t.value for t in types]
+        return self.filter(type__in=values).aggregate(s=Sum('amount_rupees'))['s'] or 0.0
+
+
 class WalletTransaction(models.Model):
     """One wallet ledger movement. Insert-only, and deliberately separate from
     ``BillingRecord`` -- see ``billing.domain.WalletTransaction`` for why."""
@@ -38,6 +49,8 @@ class WalletTransaction(models.Model):
     amount_rupees = models.FloatField()
     balance_after_rupees = models.FloatField()
     occurred_at = models.DateTimeField()
+
+    objects = WalletTransactionQuerySet.as_manager()
 
     class Meta:
         db_table = 'billing_wallet_transaction'
