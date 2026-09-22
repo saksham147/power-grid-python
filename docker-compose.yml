@@ -1,0 +1,109 @@
+name: powergrid-django
+
+services:
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: powergrid
+      POSTGRES_USER: powergrid
+      POSTGRES_PASSWORD: powergrid
+    ports:
+      # Host port 5435: distinct from a native Postgres (5432) and the reference
+      # project's own Compose stack (5433), so both can run at once without either
+      # losing a silent port race. Only the host side moves -- django reaches this
+      # one at postgres:5432 over the Compose network.
+      - "5435:5432"
+    volumes:
+      # Not .../data: Postgres 18+'s image stores data in a version-specific
+      # subdirectory of this mount and refuses to start if something else already
+      # occupies .../data directly (this is what it means by "unused mount/volume").
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U powergrid -d powergrid"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:latest
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      # Host port 6381, same reasoning as postgres above: the container's own port
+      # stays 6379, which is what django reaches it at over the Compose network.
+      - "6381:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  kafka:
+    image: apache/kafka:latest
+    environment:
+      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,INTERNAL://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9095,INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    ports:
+      # Host port 9095. Nothing in this Django port talks to Kafka today -- every app
+      # reacts to in-process Django signals instead (see simulation.signals), the
+      # project's deliberate stand-in for a message broker in a single process. This
+      # broker is provided because it was asked for, available for a future real-broker
+      # migration, and kept off both the reference stack's port (9092) and a native
+      # install either way.
+      - "9095:9092"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+
+  django:
+    build:
+      context: .
+    # Migrations run on every start, not just the first: Django's migrate is
+    # idempotent (a no-op once the schema is current), so this is what lets a fresh
+    # `docker compose up` on an empty postgres-data volume just work.
+    command: sh -c "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"
+    ports:
+      - "8000:8000"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: powergrid
+      DB_USER: powergrid
+      DB_PASSWORD: powergrid
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      # Live source: editing on the host is reflected without rebuilding the image,
+      # the same reason the reference stack's frontend service bind-mounts its source.
+      - ./powergrid:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  redis-data:
+  kafka-data:
