@@ -86,12 +86,12 @@ DATABASES = {
         'USER': os.environ.get('DB_USER', 'powergrid'),
         'PASSWORD': os.environ.get('DB_PASSWORD', 'powergrid'),
         'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '5433'),
+        'PORT': os.environ.get('DB_PORT', '5435'),
     }
 }
 
 # Redis: the customer app's zones, consumer units and latest demand.
-REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6381/0')
 
 
 # Password validation
