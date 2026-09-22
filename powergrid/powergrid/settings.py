@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'customer',
     'billing',
     'distributor',
+    'grid',
 ]
 
 MIDDLEWARE = [
