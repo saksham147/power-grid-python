@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'producer',
     'customer',
     'billing',
+    'distributor',
 ]
 
 MIDDLEWARE = [
