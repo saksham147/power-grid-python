@@ -1,1 +1,42 @@
 @import "tailwindcss";
+
+/* Matches the dashboard's own bg-zinc-950 so there's no white flash before React
+   mounts and paints it itself. */
+body {
+	background-color: #09090b;
+}
+
+/* The conduits between the map's regions (see App/GridMap.jsx PowerLine). Idle they
+   are a plain gray bar; while power is flowing they show dashes marching toward the
+   city. Two elements on screen, so animating background-position here costs nothing.
+   Vertical below `lg` (the regions stack), horizontal from `lg` up (side by side). */
+.power-line {
+	background-color: #27272a;
+	border-radius: 9999px;
+}
+
+.power-line-live {
+	background-image: repeating-linear-gradient(180deg, #22d3ee 0 6px, #164e63 6px 12px);
+	background-size: 100% 12px;
+	animation: power-flow-y 0.7s linear infinite;
+}
+
+@media (min-width: 1024px) {
+	.power-line-live {
+		background-image: repeating-linear-gradient(90deg, #22d3ee 0 6px, #164e63 6px 12px);
+		background-size: 12px 100%;
+		animation-name: power-flow-x;
+	}
+}
+
+@keyframes power-flow-y {
+	to { background-position: 0 12px; }
+}
+
+@keyframes power-flow-x {
+	to { background-position: 12px 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.power-line-live { animation: none; }
+}
