@@ -5,7 +5,7 @@ import { useCreateZoneCapacity, useDeleteZoneCapacity, useUpdateZoneCapacity } f
 import { useCreateUnit, useCreateZone, useDeleteUnit, useDeleteZone, useUpgradeUnit, useUpgradeZone } from '../lib/customerQueries.js'
 import { useDecommissionPlant, usePurchasePlant, useUnlocks, useUpgradePlantCost } from '../lib/billingQueries.js'
 import { kw, rupees } from '../lib/format'
-import { PLANT_TYPES, PROFILE_TYPES, plantCost } from './constants'
+import { DECOMMISSION_REFUND_RATIO, PLANT_TYPES, PROFILE_TYPES, plantCost } from './constants'
 
 /** Shared shell every modal in this file uses: a dimmed backdrop that closes on
  *  click, and a centered card that doesn't. */
@@ -186,7 +186,7 @@ export function EditPlantModal({ plant, onClose, onDeleted }) {
 	}
 
 	async function handleDecommission() {
-		const refund = rupees(plantCost(plant.type, plant.capacityMw) * 0.5)
+		const refund = rupees(plantCost(plant.type, plant.capacityMw) * DECOMMISSION_REFUND_RATIO)
 		if (!window.confirm(`Decommission ${plant.name}? You get back about ${refund}. This cannot be undone.`)) return
 		try {
 			await decommission.mutateAsync({ plantType: plant.type, capacityMw: plant.capacityMw })
